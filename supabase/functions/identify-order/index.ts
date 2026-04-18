@@ -21,6 +21,9 @@ serve(async (req) => {
     passenger_name, phone, flight_num, pickup_location, dropoff_location, 
     adults, children, luggage, remarks, fare (數字)。文字內容如下：\n${orderText}`
 
+    console.log("金鑰長度:", apiKey?.length);
+    console.log("金鑰開頭:", apiKey?.substring(0, 4)); // 應該會顯示 AIza
+    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
