@@ -49,6 +49,25 @@ async function loadDriverList() {
     });
 }
 
+async function fetchDrivers() {
+    const { data, error } = await supabase.from('profiles')
+        .select('id, full_name') // 確保欄位名稱跟資料庫一致
+        .eq('role', 'driver');
+
+    // 極致 J 型人的除錯標籤
+    console.log("嘗試抓取司機名單...");
+    console.log("回傳資料數量:", data ? data.length : 0);
+    if (error) console.error("抓取失敗原因:", error.message);
+
+    if (data && data.length > 0) {
+        const select = document.getElementById('driver_select'); // 確認 ID 對不對
+        select.innerHTML = '<option value="">請選擇司機</option>';
+        data.forEach(d => {
+            select.innerHTML += `<option value="${d.id}">${d.full_name}</option>`;
+        });
+    }
+}
+
 // 3. AI 辨識功能
 async function runAI() {
     const rawText = document.getElementById('ai-input').value;
