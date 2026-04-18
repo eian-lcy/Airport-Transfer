@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>機場接送管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 max-w-4xl">
+
+        <section id="login-section" class="mt-20 max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold mb-6 text-center">系統登入</h2>
+            <label for="user_id">使用者代號</label>
+            <input type="text" id="user_id" placeholder="例如：user001" class="w-full p-2 mb-4 border rounded">
+
+            <label for="password">密碼</label>
+            <input type="password" id="password" placeholder="請輸入密碼" class="w-full p-2 mb-6 border rounded">
+
+            <button onclick="handleLogin()"
+                class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">登入系統</button>
+        </section>
+
+        <main id="main-content" class="hidden">
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-blue-900">接送訂單管理</h1>
+                <button onclick="handleLogout()" class="text-red-500 hover:underline">登出</button>
+            </header>
+
+            <section id="admin-only-section" class="mb-8 bg-blue-50 p-6 rounded-xl border border-blue-200">
+                <h3 class="text-lg font-semibold mb-3">AI 快速填單</h3>
+                <textarea id="ai-input" rows="4" class="w-full p-3 border rounded-lg mb-3"
+                    placeholder="在此貼上客戶原始訊息..."></textarea>
+                <button id="btn-ai" onclick="runAI()"
+                    class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">Gemini 辨識填表</button>
+            </section>
+
+            <form id="order-form"
+                class="bg-white p-6 rounded-xl shadow-sm border mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="col-span-full font-bold text-gray-600 border-b pb-2">訂單細節</div>
+
+                <div><label>服務項目</label><input type="text" id="service_type" class="w-full border p-2 rounded"></div>
+                <div><label>日期</label><input type="date" id="service_date" class="w-full border p-2 rounded"></div>
+                <div><label>預約時間</label><input type="time" id="pickup_time" class="w-full border p-2 rounded"></div>
+                <div><label>乘客</label><input type="text" id="passenger_name" class="w-full border p-2 rounded"></div>
+                <div><label>電話</label><input type="tel" id="phone" class="w-full border p-2 rounded"></div>
+                <div><label>班機</label><input type="text" id="flight_num" class="w-full border p-2 rounded"></div>
+                <div><label>上車地點</label><input type="text" id="pickup_location" class="w-full border p-2 rounded"></div>
+                <div><label>下車地點</label><input type="text" id="dropoff_location" class="w-full border p-2 rounded">
+                </div>
+                <div><label>人數 (大/小)</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="adults" placeholder="大" class="w-1/2 border p-2 rounded">
+                        <input type="number" id="children" placeholder="小" class="w-1/2 border p-2 rounded">
+                    </div>
+                </div>
+                <div><label>行李</label><input type="text" id="luggage" class="w-full border p-2 rounded"></div>
+                <div class="col-span-full"><label>備註</label><textarea id="remarks"
+                        class="w-full border p-2 rounded"></textarea></div>
+                <div><label>車資</label><input type="number" id="fare" class="w-full border p-2 rounded"></div>
+
+                <div id="driver-select-area">
+                    <label>指派司機</label>
+                    <select id="driver_id" class="w-full border p-2 rounded">
+                        <option value="">-- 選擇司機 --</option>
+                    </select>
+                </div>
+
+                <div class="col-span-full pt-4">
+                    <button type="button" onclick="submitOrder()"
+                        class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700">儲存訂單</button>
+                </div>
+            </form>
+
+            <section>
+                <h3 class="text-xl font-bold mb-4">現有訂單</h3>
+                <div id="order-list" class="space-y-4">
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
