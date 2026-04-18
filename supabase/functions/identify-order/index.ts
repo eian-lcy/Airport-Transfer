@@ -77,6 +77,21 @@ serve(async (req) => {
         }
         const cleanJson = aiText.match(/\{[\s\S]*\}/)?.[0];
 
+        if (!cleanJson) throw new Error("AI 無法解析 JSON")
+
+        if (parsedData.service_date && typeof parsedData.service_date === 'string') {
+            const dateParts = parsedData.service_date.split('-')
+
+            // 確保陣列長度足夠，避免抓到 undefined
+            if (dateParts.length >= 2) {
+                const month = parseInt(dateParts[dateParts.length - 2])
+                const year = getCorrectYear(month) // 使用剛才定義的函數
+                const day = dateParts[dateParts.length - 1]
+
+                parsedData.service_date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            }
+        }
+        
         return new Response(cleanJson, {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
@@ -90,17 +105,4 @@ serve(async (req) => {
         })
     }
 })
-// 解析 JSON 後的處理
-const parsedData = JSON.parse(cleanJson);
 
-if (parsedData.service_date) {
-    // 假設 Gemini 回傳的是 "01-05" 或是 "2026-01-05"
-    const dateParts = parsedData.service_date.split('-');
-    const month = parseInt(dateParts[dateParts.length - 2]); // 倒數第二個是月
-    const day = parseInt(dateParts[dateParts.length - 1]);   // 最後一個是日
-
-    const year = getCorrectYear(month);
-
-    // 格式化回 YYYY-MM-DD
-    parsedData.service_date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
