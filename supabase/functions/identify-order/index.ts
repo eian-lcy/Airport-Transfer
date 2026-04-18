@@ -32,7 +32,7 @@ serve(async (req) => {
     const apiKey = keyList[Math.floor(Math.random() * keyList.length)];
 
     // 3. 模型網址修正 (使用 v1beta 以獲得最佳相容性)
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
 
     const prompt = `你是一個機場接送訂單辨識助手。請將以下文字辨識為 JSON 格式，包含：
     service_type (接機/送機), service_date (YYYY-MM-DD), pickup_time (HH:mm), 
