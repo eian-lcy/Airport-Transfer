@@ -2,107 +2,81 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// 跨年年份校準函數
 function getCorrectYear(targetMonth: number): number {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // 1-12
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
 
-    // 邏輯：如果目標月份小於現在月份，且現在是 10, 11, 12 月
-    // 代表這張訂單極高機率是明年 1, 2, 3 月的車單
-    if (targetMonth < currentMonth && currentMonth >= 10) {
-        return currentYear + 1;
-    }
-
-    // 或者是：如果識別出來的日期跟今天相比超過 6 個月的前科
-    // (這部分可以視你的接送單預約習慣調整)
-
-    return currentYear;
+  // 邏輯：如果目標月份比現在小，且現在已進入下半年（10-12月），則視為明年訂單
+  if (targetMonth < currentMonth && currentMonth >= 10) {
+    return currentYear + 1;
+  }
+  return currentYear;
 }
 
 serve(async (req) => {
-    // 處理瀏覽器的預檢請求 (CORS)
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders })
-    }
+  // 1. 先處理 CORS 預檢，避免 502/CORS 錯誤
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-    try {
+  try {
+    const { orderText } = await req.json()
+    
+    // 2. 金鑰輪詢邏輯
+    const keysRaw = Deno.env.get('GEMINI_API_KEYS') || "";
+    const keyList = keysRaw.split(',').map(k => k.trim()).filter(k => k.length > 0);
+    const apiKey = keyList[Math.floor(Math.random() * keyList.length)];
 
-        const { orderText } = await req.json()
-        // 1. 取得整串金鑰字串
-        const keysRaw = Deno.env.get('GEMINI_API_KEYS') || "";
+    // 3. 模型網址修正 (使用 v1beta 以獲得最佳相容性)
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`
 
-        // 2. 用逗號拆解成陣列 [ "A123", "B456", "C789" ]
-        const keyList = keysRaw.split(',').map(k => k.trim()).filter(k => k.length > 0);
-
-        // 3. 從陣列中隨機抽出一個索引 (Index)
-        const apiKey = keyList[Math.floor(Math.random() * keyList.length)];
-
-        console.log("後端偵測到的金鑰總數:", keyList.length);
-        console.log("本次使用的金鑰開頭:", apiKey?.substring(0, 4));
-        console.log("本次使用的金鑰長度:", apiKey?.length);
-
-        const prompt = `你是一個機場接送訂單辨識助手。請將以下文字辨識為 JSON 格式，包含欄位：
+    const prompt = `你是一個機場接送訂單辨識助手。請將以下文字辨識為 JSON 格式，包含：
     service_type (接機/送機), service_date (YYYY-MM-DD), pickup_time (HH:mm), 
     passenger_name, phone, flight_num, pickup_location, dropoff_location, 
-    adults, children, luggage, remarks, fare (數字)。文字內容如下：\n${orderText}`
+    adults, children, luggage, remarks, fare (數字)。
+    【注意】：如果輸入文字沒年份，請先回傳 MM-DD 格式即可。文字內容如下：\n${orderText}`
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        })
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    })
 
-        const result = await response.json()
-        console.log("Gemini 原文回應:", JSON.stringify(result));
-        if (result.error) {
-            return new Response(JSON.stringify({ error: `Gemini API 錯誤: ${result.error.message}` }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400
-            });
-        }
+    const result = await response.json()
+    if (result.error) throw new Error(result.error.message)
 
-        // 這裡只是簡單範例，實務上需解析 Gemini 回傳的文字，並確保它是有效的 JSON 格式
-        const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!aiText) {
-            return new Response(JSON.stringify({ error: "Gemini 沒有回傳有效內容，請檢查 Logs" }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400
-            });
-        }
-        const cleanJson = aiText.match(/\{[\s\S]*\}/)?.[0];
+    const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text
+    const cleanJson = aiText?.match(/\{[\s\S]*\}/)?.[0]
+    if (!cleanJson) throw new Error("無法解析 AI 回傳的內容")
 
-        if (!cleanJson) throw new Error("AI 無法解析 JSON")
+    // 4. 解析與年份校正 (確保 parsedData 定義在 try 塊內並在此處回傳)
+    let parsedData = JSON.parse(cleanJson)
 
-        if (parsedData.service_date && typeof parsedData.service_date === 'string') {
-            const dateParts = parsedData.service_date.split('-')
-
-            // 確保陣列長度足夠，避免抓到 undefined
-            if (dateParts.length >= 2) {
-                const month = parseInt(dateParts[dateParts.length - 2])
-                const year = getCorrectYear(month) // 使用剛才定義的函數
-                const day = dateParts[dateParts.length - 1]
-
-                parsedData.service_date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            }
-        }
-        
-        return new Response(cleanJson, {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        })
-
-
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-        })
+    if (parsedData.service_date && typeof parsedData.service_date === 'string') {
+      const parts = parsedData.service_date.split('-')
+      if (parts.length >= 2) {
+        const m = parseInt(parts[parts.length - 2])
+        const d = parseInt(parts[parts.length - 1])
+        const y = getCorrectYear(m)
+        parsedData.service_date = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      }
     }
-})
 
+    // 5. 成功回傳 (必須在 try 區塊內，這樣才能抓到 parsedData)
+    return new Response(JSON.stringify(parsedData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+
+  } catch (error) {
+    console.error("錯誤發生:", error.message)
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
+})
