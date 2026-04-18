@@ -4,6 +4,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 2. 登入監聽與權限切換
 supabaseClient.auth.onAuthStateChange((event, session) => {
+    console.log("當前狀態:", event, session); // 偵錯
     if (session) {
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('main-content').classList.remove('hidden');
@@ -89,6 +90,9 @@ async function handleLogin() {
         console.log("登入成功:", data.user);
         // 登入成功後的邏輯會被 supabaseClient.auth.onAuthStateChange 捕捉
     }
+}
+async function handleLogout() {
+    await supabaseClient.auth.signOut();
 }
 async function submitOrder() { /* 使用 supabaseClient.from('orders').insert */ }
 async function loadOrders() { /* 根據 RLS 權限讀取 orders */ }
