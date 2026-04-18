@@ -28,13 +28,12 @@ serve(async (req) => {
         console.log("本次使用的金鑰開頭:", apiKey?.substring(0, 4));
         console.log("本次使用的金鑰長度:", apiKey?.length);
 
-
         const prompt = `你是一個機場接送訂單辨識助手。請將以下文字辨識為 JSON 格式，包含欄位：
     service_type (接機/送機), service_date (YYYY-MM-DD), pickup_time (HH:mm), 
     passenger_name, phone, flight_num, pickup_location, dropoff_location, 
     adults, children, luggage, remarks, fare (數字)。文字內容如下：\n${orderText}`
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
