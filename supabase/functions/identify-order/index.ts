@@ -30,9 +30,16 @@ serve(async (req) => {
     })
 
     const result = await response.json()
-    // 這裡只是簡單範例，實務上需解析 Gemini 回傳的文字
-    const aiText = result.candidates[0].content.parts[0].text
-    const cleanJson = aiText.match(/\{[\s\S]*\}/)?.[0] // 抓取 JSON 部分
+    console.log("Gemini Response:", JSON.stringify(result));
+    if (result.error) {
+      throw new Error(`Gemini API Error: ${result.error.message}`);
+    }
+    const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!aiText) {
+      throw new Error("Gemini 回傳內容格式不正確或為空");
+    }
+
+    const cleanJson = aiText.match(/\{[\s\S]*\}/)?.[0];    
 
     return new Response(cleanJson, {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
