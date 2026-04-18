@@ -39,7 +39,7 @@ async function runAI() {
             body: { orderText: rawText },
             // 關鍵：強制清空 Header，不讓它自動帶入可能報錯的加密權杖
             headers: {
-                "Authorization": ""
+                "Authorization": `Bearer ${SUPABASE_KEY}` 
             }
         });
 
