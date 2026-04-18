@@ -14,6 +14,7 @@ serve(async (req) => {
 
     try {
 
+        const { orderText } = await req.json()
         // 1. 取得整串金鑰字串
         const keysRaw = Deno.env.get('GEMINI_API_KEYS') || "";
 
