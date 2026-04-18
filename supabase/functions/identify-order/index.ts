@@ -6,6 +6,23 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function getCorrectYear(targetMonth: number): number {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+
+    // 邏輯：如果目標月份小於現在月份，且現在是 10, 11, 12 月
+    // 代表這張訂單極高機率是明年 1, 2, 3 月的車單
+    if (targetMonth < currentMonth && currentMonth >= 10) {
+        return currentYear + 1;
+    }
+
+    // 或者是：如果識別出來的日期跟今天相比超過 6 個月的前科
+    // (這部分可以視你的接送單預約習慣調整)
+
+    return currentYear;
+}
+
 serve(async (req) => {
     // 處理瀏覽器的預檢請求 (CORS)
     if (req.method === 'OPTIONS') {
@@ -65,6 +82,7 @@ serve(async (req) => {
             status: 200,
         })
 
+
     } catch (error) {
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -72,3 +90,17 @@ serve(async (req) => {
         })
     }
 })
+// 解析 JSON 後的處理
+const parsedData = JSON.parse(cleanJson);
+
+if (parsedData.service_date) {
+    // 假設 Gemini 回傳的是 "01-05" 或是 "2026-01-05"
+    const dateParts = parsedData.service_date.split('-');
+    const month = parseInt(dateParts[dateParts.length - 2]); // 倒數第二個是月
+    const day = parseInt(dateParts[dateParts.length - 1]);   // 最後一個是日
+
+    const year = getCorrectYear(month);
+
+    // 格式化回 YYYY-MM-DD
+    parsedData.service_date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
