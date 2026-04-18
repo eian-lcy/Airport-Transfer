@@ -2,54 +2,57 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
-  // 處理瀏覽器的預檢請求 (CORS)
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+    // 處理瀏覽器的預檢請求 (CORS)
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders })
+    }
 
-  try {
-    const { orderText } = await req.json()
-    const apiKey = Deno.env.get('GEMINI_API_KEYS') // 這是我們等一下要在後台設定的金鑰名稱
+    try {
 
-    const prompt = `你是一個機場接送訂單辨識助手。請將以下文字辨識為 JSON 格式，包含欄位：
+        // 1. 取得整串金鑰字串
+        const keysRaw = Deno.env.get('GEMINI_API_KEYS') || "";
+
+        // 2. 用逗號拆解成陣列 [ "A123", "B456", "C789" ]
+        const keyList = keysRaw.split(',');
+
+        // 3. 從陣列中隨機抽出一個索引 (Index)
+        const apiKey = keyList[Math.floor(Math.random() * keyList.length)];
+
+        console.log(`目前使用的金鑰索引為: ${keyList.indexOf(apiKey)}`);
+
+
+        const prompt = `你是一個機場接送訂單辨識助手。請將以下文字辨識為 JSON 格式，包含欄位：
     service_type (接機/送機), service_date (YYYY-MM-DD), pickup_time (HH:mm), 
     passenger_name, phone, flight_num, pickup_location, dropoff_location, 
     adults, children, luggage, remarks, fare (數字)。文字內容如下：\n${orderText}`
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    })
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        })
 
-    const result = await response.json()
-    console.log("Gemini Response:", JSON.stringify(result));
-    if (result.error) {
-      throw new Error(`Gemini API Error: ${result.error.message}`);
+        const result = await response.json()
+        // 這裡只是簡單範例，實務上需解析 Gemini 回傳的文字
+        const aiText = result.candidates[0].content.parts[0].text
+        const cleanJson = aiText.match(/\{[\s\S]*\}/)?.[0] // 抓取 JSON 部分
+
+        return new Response(cleanJson, {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        })
+
+    } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+        })
     }
-    const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!aiText) {
-      throw new Error("Gemini 回傳內容格式不正確或為空");
-    }
-
-    const cleanJson = aiText.match(/\{[\s\S]*\}/)?.[0];    
-
-    return new Response(cleanJson, {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
-  }
 })
