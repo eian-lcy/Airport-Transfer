@@ -1,9 +1,9 @@
 // script.js
 // 1. Supabase 設定
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 2. 登入監聽與權限切換
-supabase.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session) {
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('main-content').classList.remove('hidden');
@@ -17,7 +17,7 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 // 檢查角色 (假設你在 profiles 表有存 role)
 async function checkUserRole(userId) {
-    const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
+    const { data } = await supabaseClient.from('profiles').select('role').eq('id', userId).single();
     if (data?.role !== 'admin') {
         document.getElementById('admin-only-section').classList.add('hidden');
         document.getElementById('driver-select-area').classList.add('hidden');
@@ -34,7 +34,7 @@ async function runAI() {
     btn.disabled = true;
 
     try {
-        const { data, error } = await supabase.functions.invoke('identify-order', {
+        const { data, error } = await supabaseClient.functions.invoke('identify-order', {
             body: { orderText: rawText }
         });
 
@@ -77,7 +77,7 @@ async function handleLogin() {
     // 重點：在此統一加上你的虛擬網域後綴
     const fakeEmail = `${userId}@jcjs.com`; 
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
         email: fakeEmail,
         password: password,
     });
@@ -87,8 +87,8 @@ async function handleLogin() {
         alert("登入失敗：代號或密碼錯誤");
     } else {
         console.log("登入成功:", data.user);
-        // 登入成功後的邏輯會被 supabase.auth.onAuthStateChange 捕捉
+        // 登入成功後的邏輯會被 supabaseClient.auth.onAuthStateChange 捕捉
     }
 }
-async function submitOrder() { /* 使用 supabase.from('orders').insert */ }
+async function submitOrder() { /* 使用 supabaseClient.from('orders').insert */ }
 async function loadOrders() { /* 根據 RLS 權限讀取 orders */ }
