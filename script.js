@@ -1,6 +1,6 @@
 // script.js
 // 1. Supabase 設定
-const supabaseClient = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 2. 登入監聽與權限切換
 supabaseClient.auth.onAuthStateChange((event, session) => {
