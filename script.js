@@ -28,25 +28,37 @@ async function checkUserRole(userId) {
 }
 
 async function loadDriverList() {
-    const { data: drivers, error } = await supabaseClient
-        .from('profiles')           // 指向你的 profiles 表
-        .select('id, full_name')     // 抓取 ID 和 姓名 (假設欄位叫 full_name)
-        .eq('role', 'driver');       // 關鍵：只抓取 role 為 driver 的人
+    console.log("開始抓取司機清單..."); // 檢查函數有沒有跑
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'driver');
 
     if (error) {
-        console.error("抓取司機清單失敗:", error.message);
+        console.error("抓取失敗！原因：", error.message); // 如果有紅字，這行會報警
         return;
     }
 
-    const selectElement = document.getElementById('driver_id');
-    // 先清空舊選項，再填入新司機
-    selectElement.innerHTML = '<option value="">請選擇司機</option>';
-    drivers.forEach(driver => {
-        const option = document.createElement('option');
-        option.value = driver.id;
-        option.textContent = driver.full_name;
-        selectElement.appendChild(option);
-    });
+    console.log("資料庫回傳結果:", data); // 如果是 []，代表 RLS 或過濾條件不對
+
+    const select = document.getElementById('driver_id');
+    if (!select) {
+        console.error("錯誤：找不到 ID 為 driver_id 的 select 標籤！");
+        return;
+    }
+
+    if (data && data.length > 0) {
+        select.innerHTML = '<option value="">請選擇司機</option>';
+        data.forEach(d => {
+            const option = document.createElement('option');
+            option.value = d.id;
+            option.textContent = d.full_name;
+            select.appendChild(option);
+        });
+        console.log("下拉選單渲染完成！");
+    } else {
+        select.innerHTML = '<option value="">目前無可用司機</option>';
+    }
 }
 
 async function fetchDrivers() {
@@ -82,7 +94,7 @@ async function runAI() {
             body: { orderText: rawText },
             // 關鍵：強制清空 Header，不讓它自動帶入可能報錯的加密權杖
             headers: {
-                "Authorization": `Bearer ${SUPABASE_KEY}` 
+                "Authorization": `Bearer ${SUPABASE_KEY}`
             }
         });
 
