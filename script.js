@@ -10,11 +10,11 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session) {
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('main-content').classList.remove('hidden');
-        
+
         // --- 核心修復：登入後立刻跑這三個函數 ---
         checkUserRole(session.user.id);
-        loadOrders(); 
-        loadDrivers(); 
+        loadOrders();
+        loadDrivers();
     } else {
         document.getElementById('login-section').classList.remove('hidden');
         document.getElementById('main-content').classList.add('hidden');
@@ -32,11 +32,11 @@ async function checkUserRole(userId) {
 
 async function loadDrivers() {
     console.log("🚀 [系統] 開始執行 loadDrivers...");
-    
+
     // 確保使用 supabaseClient
     const { data, error } = await supabaseClient
         .from('profiles')
-        .select('id, full_name') 
+        .select('id, full_name')
         .eq('role', 'driver');
 
     if (error) {
@@ -155,5 +155,49 @@ async function handleLogin() {
 async function handleLogout() {
     await supabaseClient.auth.signOut();
 }
-async function submitOrder() { /* 使用 supabaseClient.from('orders').insert */ }
+async function submitOrder() {
+    /* 使用 supabaseClient.from('orders').insert */
+    console.log("🚀 開始儲存訂單...");
+
+    // 1. 收集表單資料 (對齊 index.html 的 ID)
+    const orderData = {
+        service_type: document.getElementById('service_type').value,
+        service_date: document.getElementById('service_date').value,
+        pickup_time: document.getElementById('pickup_time').value,
+        passenger_name: document.getElementById('passenger_name').value,
+        phone: document.getElementById('phone').value,
+        flight_num: document.getElementById('flight_num').value,
+        pickup_location: document.getElementById('pickup_location').value,
+        dropoff_location: document.getElementById('dropoff_location').value,
+        adults: parseInt(document.getElementById('adults').value) || 0,
+        children: parseInt(document.getElementById('children').value) || 0,
+        luggage: document.getElementById('luggage').value,
+        remarks: document.getElementById('remarks').value,
+        fare: parseFloat(document.getElementById('fare').value) || 0,
+        driver_id: document.getElementById('driver_select').value || null // 抓取選中的司機 ID
+    };
+
+    console.log("📦 準備送出的資料:", orderData);
+
+    // 2. 寫入 Supabase
+    const { data, error } = await supabaseClient
+        .from('orders') // 確認你的資料表名稱是 orders
+        .insert([orderData])
+        .select();
+
+    if (error) {
+        console.error("❌ 儲存失敗:", error.message);
+        alert("儲存失敗：" + error.message);
+        return;
+    }
+
+    console.log("✨ 儲存成功:", data);
+    alert("訂單已成功儲存！");
+
+    // 3. 儲存成功後重新載入列表
+    if (typeof loadOrders === 'function') loadOrders();
+
+    // 4. 清空表單
+    document.getElementById('order-form').reset();
+}
 async function loadOrders() { /* 根據 RLS 權限讀取 orders */ }
