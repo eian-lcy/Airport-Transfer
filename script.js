@@ -13,8 +13,8 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         
         // --- 核心修復：登入後立刻跑這三個函數 ---
         checkUserRole(session.user.id);
-        loadOrders();
-        loadDriverList(); 
+        loadOrders(); 
+        loadDrivers(); 
     } else {
         document.getElementById('login-section').classList.remove('hidden');
         document.getElementById('main-content').classList.add('hidden');
@@ -30,23 +30,26 @@ async function checkUserRole(userId) {
     }
 }
 
-async function loadDriverList() {
-    console.log("🚀 開始抓取司機清單...");
+async function loadDrivers() {
+    console.log("🚀 [系統] 開始執行 loadDrivers...");
     
-    // 注意：這裡必須用 supabaseClient，並確保欄位叫 full_name
+    // 確保使用 supabaseClient
     const { data, error } = await supabaseClient
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name') 
         .eq('role', 'driver');
 
-    if (error) return console.error("抓取司機失敗:", error.message);
+    if (error) {
+        console.error("❌ 抓取失敗:", error.message);
+        return;
+    }
 
-    console.log("✅ 資料庫回傳結果:", data);
+    console.log("✅ [數據] 司機清單回傳:", data);
 
-    const select = document.getElementById('driver_select'); // 請確認 HTML 裡的 ID 是這個
-    if (!select) return console.error("找不到 driver_select 選單");
+    const select = document.getElementById('driver_select');
+    if (!select) return console.error("找不到 driver_select 元素");
 
-    if (select && data) {
+    if (data && data.length > 0) {
         select.innerHTML = '<option value="">請選擇司機</option>';
         data.forEach(d => {
             const option = document.createElement('option');
@@ -54,28 +57,30 @@ async function loadDriverList() {
             option.textContent = d.full_name;
             select.appendChild(option);
         });
-        console.log("✅ 司機選單更新成功！資料筆數:", data.length);
+        console.log("✨ 下拉選單渲染完成！");
+    } else {
+        select.innerHTML = '<option value="">目前無可用司機</option>';
     }
 }
 
-async function fetchDrivers() {
-    const { data, error } = await supabaseClient.from('profiles')
-        .select('id, full_name') // 確保欄位名稱跟資料庫一致
-        .eq('role', 'driver');
+// async function fetchDrivers() {
+//     const { data, error } = await supabaseClient.from('profiles')
+//         .select('id, full_name') // 確保欄位名稱跟資料庫一致
+//         .eq('role', 'driver');
 
-    // 極致 J 型人的除錯標籤
-    console.log("嘗試抓取司機名單...");
-    console.log("回傳資料數量:", data ? data.length : 0);
-    if (error) console.error("抓取失敗原因:", error.message);
+//     // 極致 J 型人的除錯標籤
+//     console.log("嘗試抓取司機名單...");
+//     console.log("回傳資料數量:", data ? data.length : 0);
+//     if (error) console.error("抓取失敗原因:", error.message);
 
-    if (data && data.length > 0) {
-        const select = document.getElementById('driver_select'); // 確認 ID 對不對
-        select.innerHTML = '<option value="">請選擇司機</option>';
-        data.forEach(d => {
-            select.innerHTML += `<option value="${d.id}">${d.full_name}</option>`;
-        });
-    }
-}
+//     if (data && data.length > 0) {
+//         const select = document.getElementById('driver_select'); // 確認 ID 對不對
+//         select.innerHTML = '<option value="">請選擇司機</option>';
+//         data.forEach(d => {
+//             select.innerHTML += `<option value="${d.id}">${d.full_name}</option>`;
+//         });
+//     }
+// }
 
 // 3. AI 辨識功能
 async function runAI() {
