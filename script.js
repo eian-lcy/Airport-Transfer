@@ -14,7 +14,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         // --- 核心修復：登入後立刻跑這三個函數 ---
         checkUserRole(session.user.id);
         loadOrders();
-        loadDrivers(); 
+        loadDriverList(); 
     } else {
         document.getElementById('login-section').classList.remove('hidden');
         document.getElementById('main-content').classList.add('hidden');
