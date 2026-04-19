@@ -6,12 +6,15 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 2. 登入監聽與權限切換
 supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log("當前狀態:", event, session); // 偵錯
+    console.log("當前狀態:", event, session);
     if (session) {
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('main-content').classList.remove('hidden');
+        
+        // --- 核心修復：登入後立刻跑這三個函數 ---
         checkUserRole(session.user.id);
         loadOrders();
+        loadDrivers(); 
     } else {
         document.getElementById('login-section').classList.remove('hidden');
         document.getElementById('main-content').classList.add('hidden');
@@ -28,26 +31,22 @@ async function checkUserRole(userId) {
 }
 
 async function loadDriverList() {
-    console.log("開始抓取司機清單..."); // 檢查函數有沒有跑
-    const { data, error } = await supabase
+    console.log("🚀 開始抓取司機清單...");
+    
+    // 注意：這裡必須用 supabaseClient，並確保欄位叫 full_name
+    const { data, error } = await supabaseClient
         .from('profiles')
         .select('id, full_name')
         .eq('role', 'driver');
 
-    if (error) {
-        console.error("抓取失敗！原因：", error.message); // 如果有紅字，這行會報警
-        return;
-    }
+    if (error) return console.error("抓取司機失敗:", error.message);
 
-    console.log("資料庫回傳結果:", data); // 如果是 []，代表 RLS 或過濾條件不對
+    console.log("✅ 資料庫回傳結果:", data);
 
-    const select = document.getElementById('driver_id');
-    if (!select) {
-        console.error("錯誤：找不到 ID 為 driver_id 的 select 標籤！");
-        return;
-    }
+    const select = document.getElementById('driver_select'); // 請確認 HTML 裡的 ID 是這個
+    if (!select) return console.error("找不到 driver_select 選單");
 
-    if (data && data.length > 0) {
+    if (select && data) {
         select.innerHTML = '<option value="">請選擇司機</option>';
         data.forEach(d => {
             const option = document.createElement('option');
@@ -55,14 +54,12 @@ async function loadDriverList() {
             option.textContent = d.full_name;
             select.appendChild(option);
         });
-        console.log("下拉選單渲染完成！");
-    } else {
-        select.innerHTML = '<option value="">目前無可用司機</option>';
+        console.log("✅ 司機選單更新成功！資料筆數:", data.length);
     }
 }
 
 async function fetchDrivers() {
-    const { data, error } = await supabase.from('profiles')
+    const { data, error } = await supabaseClient.from('profiles')
         .select('id, full_name') // 確保欄位名稱跟資料庫一致
         .eq('role', 'driver');
 
