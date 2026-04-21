@@ -244,4 +244,3 @@ async function submitOrder() {
     // 4. 清空表單
     document.getElementById('order-form').reset();
 }
-async function loadOrders() { /* 根據 RLS 權限讀取 orders */ }
