@@ -30,8 +30,52 @@ async function checkUserRole(userId) {
     }
 }
 
-async function loadDrivers() {
-    console.log("🚀 [系統] 開始執行 loadDrivers...");
+async function loadOrders() {
+    console.log("🚀 開始載入訂單清單...");
+    const orderListDiv = document.getElementById('order-list');
+    if (!orderListDiv) return;
+
+    // 1. 從 Supabase 抓取資料 (按日期排序)
+    const { data: orders, error } = await supabaseClient
+        .from('orders')
+        .select('*')
+        .order('service_date', { ascending: true });
+
+    if (error) {
+        console.error("❌ 載入訂單失敗:", error.message);
+        orderListDiv.innerHTML = `<p class="text-red-500">載入失敗: ${error.message}</p>`;
+        return;
+    }
+
+    console.log("✅ 成功抓取訂單數:", orders.length);
+
+    // 2. 清空舊內容並渲染新內容
+    if (!orders || orders.length === 0) {
+        orderListDiv.innerHTML = '<p class="text-gray-500 text-center py-8">目前尚無訂單</p>';
+        return;
+    }
+
+    orderListDiv.innerHTML = orders.map(order => `
+        <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500 flex flex-col gap-2">
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="font-bold text-lg text-blue-900">${order.service_type || '未分類'}</span>
+                    <span class="ml-2 text-gray-500 text-sm">${order.service_date} ${order.pickup_time || ''}</span>
+                </div>
+                <div class="text-right">
+                    <span class="font-bold text-green-600">NT$ ${order.fare || 0}</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-x-4 text-sm text-gray-600">
+                <p>👤 乘客: ${order.passenger_name || '未提供'}</p>
+                <p>📞 電話: ${order.phone || '未提供'}</p>
+                <p>📍 從: ${order.pickup_location || '未提供'}</p>
+                <p>🏁 到: ${order.dropoff_location || '未提供'}</p>
+            </div>
+            ${order.remarks ? `<div class="mt-2 text-xs bg-gray-50 p-2 rounded text-gray-500">備註: ${order.remarks}</div>` : ''}
+        </div>
+    `).join('');
+}
 
     // 確保使用 supabaseClient
     const { data, error } = await supabaseClient
